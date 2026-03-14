@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  JOB_SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+enum WorkType {
+  ONSITE
+  REMOTE
+  HYBRID
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  TEMPORARY
+  INTERNSHIP
+  FREELANCE
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  REVIEWING
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  EXPIRED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  OPEN_TO_OFFERS
+  NOT_AVAILABLE
+}
+
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  passwordHash     String?
+  emailVerifiedAt  DateTime?
+  fullName         String
+  phone            String?
+  role             UserRole
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  seekerProfile    JobSeekerProfile?
+  employerProfile  EmployerProfile?
+  messagesSent     Message[]          @relation("SentMessages")
+  messagesReceived Message[]          @relation("ReceivedMessages")
+  notifications    Notification[]
+}
+
+model Profession {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  category    String?
+  description String?
+  jobs        Job[]
+  seekers     JobSeekerProfile[]
+}
+
+model Skill {
+  id      String           @id @default(cuid())
+  name    String           @unique
+  seekers JobSeekerSkill[]
+  jobs    JobSkill[]
+}
+
+model JobSeekerProfile {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  professionId      String
+  bio               String?
+  location          String?
+  yearsExperience   Int?
+  preferredWorkType WorkType?
+  expectedSalaryMin Int?
+  expectedSalaryMax Int?
+  availability      AvailabilityStatus @default(OPEN_TO_OFFERS)
+  resumeUrl         String?
+  profileImageUrl   String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id])
+  profession        Profession         @relation(fields: [professionId], references: [id])
+  skills            JobSeekerSkill[]
+  applications      Application[]
+  savedJobs         SavedJob[]
+  invites           CandidateInvite[]
+}
+
+model JobSeekerSkill {
+  id      String           @id @default(cuid())
+  seekerId String
+  skillId  String
+  seeker   JobSeekerProfile @relation(fields: [seekerId], references: [id])
+  skill    Skill            @relation(fields: [skillId], references: [id])
+
+  @@unique([seekerId, skillId])
+}
+
+model EmployerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  jobTitle  String?
+  companyId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  company   Company? @relation(fields: [companyId], references: [id])
+}
+
+model Company {
+  id                   String                @id @default(cuid())
+  name                 String
+  logoUrl              String?
+  website              String?
+  description          String?
+  industry             String?
+  location             String?
+  isVerified           Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  employers            EmployerProfile[]
+  jobs                 Job[]
+  verificationRequests VerificationRequest[]
+}
+
+model Job {
+  id                 String          @id @default(cuid())
+  companyId          String
+  title              String
+  professionId       String
+  description        String
+  location           String?
+  workType           WorkType?
+  employmentType     EmploymentType?
+  salaryMin          Int?
+  salaryMax          Int?
+  experienceRequired Int?
+  deadline           DateTime?
+  status             JobStatus       @default(OPEN)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  company            Company         @relation(fields: [companyId], references: [id])
+  profession         Profession      @relation(fields: [professionId], references: [id])
+  skills             JobSkill[]
+  applications       Application[]
+  savedBy            SavedJob[]
+  invites            CandidateInvite[]
+}
+
+model JobSkill {
+  id      String @id @default(cuid())
+  jobId   String
+  skillId String
+  job     Job    @relation(fields: [jobId], references: [id])
+  skill   Skill  @relation(fields: [skillId], references: [id])
+
+  @@unique([jobId, skillId])
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  jobId       String
+  seekerId    String
+  status      ApplicationStatus @default(SUBMITTED)
+  coverLetter String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  job         Job               @relation(fields: [jobId], references: [id])
+  seeker      JobSeekerProfile  @relation(fields: [seekerId], references: [id])
+  messages    Message[]
+
+  @@unique([jobId, seekerId])
+}
+
+model Message {
+  id            String       @id @default(cuid())
+  senderId      String
+  receiverId    String
+  jobId         String?
+  applicationId String?
+  body          String
+  createdAt     DateTime     @default(now())
+  sender        User         @relation("SentMessages", fields: [senderId], references: [id])
+  receiver      User         @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  application   Application? @relation(fields: [applicationId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model SavedJob {
+  id        String           @id @default(cuid())
+  seekerId  String
+  jobId     String
+  createdAt DateTime         @default(now())
+  seeker    JobSeekerProfile @relation(fields: [seekerId], references: [id])
+  job       Job              @relation(fields: [jobId], references: [id])
+
+  @@unique([seekerId, jobId])
+}
+
+model CandidateInvite {
+  id        String           @id @default(cuid())
+  seekerId  String
+  jobId     String
+  message   String?
+  createdAt DateTime         @default(now())
+  seeker    JobSeekerProfile @relation(fields: [seekerId], references: [id])
+  job       Job              @relation(fields: [jobId], references: [id])
+
+  @@unique([seekerId, jobId])
+}
+
+model VerificationRequest {
+  id          String   @id @default(cuid())
+  companyId   String
+  documentUrl String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
