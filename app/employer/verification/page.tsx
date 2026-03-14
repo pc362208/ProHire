@@ -22,8 +22,15 @@ export default async function EmployerVerificationPage() {
       <div className="card">
         <h2>Previous requests</h2>
         {requests.length ? requests.map((request) => (
-          <p key={request.id}><strong>{request.status}</strong> · {new Date(request.createdAt).toLocaleDateString()} · <a href={request.documentUrl}>View document</a></p>
-        )) : <p className="muted">No verification requests yet.</p>}
+  <p key={request.id}>
+    <strong>{request.status}</strong> · {new Date(request.createdAt).toLocaleDateString()} ·{" "}
+    {request.documentUrl ? (
+      <a href={request.documentUrl}>View document</a>
+    ) : (
+      <span>No document</span>
+    )}
+  </p>
+)) : <p className="muted">No verification requests yet.</p>}
       </div>
     </div>
   );
