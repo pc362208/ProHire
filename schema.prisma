@@ -64,6 +64,9 @@ model User {
   messagesSent     Message[]          @relation("SentMessages")
   messagesReceived Message[]          @relation("ReceivedMessages")
   notifications    Notification[]
+
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 }
 
 model Profession {
